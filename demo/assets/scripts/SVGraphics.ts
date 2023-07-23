@@ -9,7 +9,8 @@ enum SVGraphicsEventType {
     GRAPHICS_PARSED,
     GRAPHICS_RENDERED,
     GRAPHICS_DRAWN,
-    GRAPHICS_ERASED
+    GRAPHICS_ERASED,
+    INVALID_SVG_PLOT
 }
 
 interface DrawSettings {
@@ -77,7 +78,7 @@ export class SVGraphics extends Graphics {
             this._svgFile.hideFlags = CCObject.Flags.EditorOnly;
         }
 
-        this._recompileGraphics();
+        this.recompileGraphics();
     }
     @property({ 
         min: 0.1, 
@@ -93,14 +94,15 @@ export class SVGraphics extends Graphics {
     set threshold(value: number){
         this._threshold = value;
 
-        this._recompileGraphics();
+        this.recompileGraphics();
     }
     @property({ 
         tooltip: `Property used to animate the appearance of graphics. Change it from the animation timeline.
             Value from 0 to 0.5 are used to draw strokes, values from 0.5 to 1 are used to fill shapes. 
             Do not forget to call the function "startAppearance" at the beginning of changing this property. 
             And call the function "stopAppearance" at the end of changing it.
-            Leave the property set to 1 if you don't need to animate graphics appearance`
+            Leave the property set to 1 if you don't need to animate graphics appearance.
+            Change "Line Width" property to change width of stroke in drawing animation.`
     })
     public appearanceProgress: number = 1;
     @property({
@@ -111,7 +113,7 @@ export class SVGraphics extends Graphics {
         return false;
     }
     set recompileInEditor(value: boolean) {
-        this._recompileGraphics();
+        this.recompileGraphics();
     }
 
     @property
@@ -133,9 +135,10 @@ export class SVGraphics extends Graphics {
         this.stopAppearance();
         if (!EDITOR) {
             this._setDefaultProperties();
-
             this._clearGraphics();
             this._renderGraphics();
+
+            // window.DEBUG = this;
         }
     }
 
@@ -158,7 +161,7 @@ export class SVGraphics extends Graphics {
         }
     }
 
-    parseFile(svgPlot: string) {
+    parseSVG(svgPlot: string) {
         this._setDefaultProperties();
 
         const parser = new DOMParser();
@@ -180,6 +183,29 @@ export class SVGraphics extends Graphics {
             svGraphicsEventTarget.emit(SVGraphicsEventType.GRAPHICS_PARSED);
         } else {
             warn('This asset is not SVG file.');
+            svGraphicsEventTarget.emit(SVGraphicsEventType.INVALID_SVG_PLOT);
+        }
+    }
+
+    recompileGraphics(svgPlot?: string) {
+        this._clearGraphics();
+        this._drawElements = [];
+
+        const uiTransform: UITransform = this.getComponent(UITransform);
+        uiTransform.setContentSize(0, 0);
+        uiTransform.setAnchorPoint(0.5, 0.5);
+
+        if (svgPlot || this._svgFile) {
+            this.parseSVG(svgPlot || this._svgFile.text);
+            this._renderGraphics(EDITOR ? 1 : this.appearanceProgress);
+
+            this.fillColor = this._defaultFillColor;
+            this.strokeColor = this._defaultStrokeColor;
+            this.lineWidth = this._defaultLineWidth;
+
+            if (EDITOR) {
+                log('SVG successfully compiled');
+            }
         }
     }
 
@@ -485,28 +511,6 @@ export class SVGraphics extends Graphics {
 
         needStroke && this.stroke();
         needFill && this.fill();
-    }
-
-    private _recompileGraphics() {
-        this._clearGraphics();
-        this._drawElements = [];
-
-        const uiTransform: UITransform = this.getComponent(UITransform);
-        uiTransform.setContentSize(0, 0);
-        uiTransform.setAnchorPoint(0.5, 0.5);
-
-        if (this._svgFile) {
-            this.parseFile(this._svgFile.text);
-            this._renderGraphics(EDITOR ? 1 : this.appearanceProgress);
-
-            this.fillColor = this._defaultFillColor;
-            this.strokeColor = this._defaultStrokeColor;
-            this.lineWidth = this._defaultLineWidth;
-
-            if (EDITOR) {
-                log('SVG successfully compiled');
-            }
-        }
     }
 }
 

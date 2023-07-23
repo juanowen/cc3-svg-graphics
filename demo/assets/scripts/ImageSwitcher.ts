@@ -4,7 +4,9 @@ const { ccclass, property } = _decorator;
 
 const imageSwitcherEventTarget: EventTarget = new EventTarget();
 enum ImageSwitcherEventType {
-    SWITCH_IMAGE
+    SWITCH_IMAGE,
+    FETCH_IMAGE,
+    UPDATE_IMAGE
 }
 
 @ccclass('ImageSwitcher')
@@ -26,11 +28,23 @@ export class ImageSwitcher extends Component {
         }
 
         imageSwitcherEventTarget.on(ImageSwitcherEventType.SWITCH_IMAGE, this.onSwitchImage, this);
+        imageSwitcherEventTarget.on(ImageSwitcherEventType.FETCH_IMAGE, this.onFetchImage, this);
+        imageSwitcherEventTarget.on(ImageSwitcherEventType.UPDATE_IMAGE, this.onUpdateImage, this);
+
         this._currentImageIndex = this.images.indexOf(this.SVGraphics.svgFile) | 0;
     }
 
     onSwitchImage() {
         this._currentImageIndex = (this._currentImageIndex + 1) % this.images.length;
+        this.onUpdateImage();
+    }
+
+    onFetchImage(svgPlot: string) {
+        this.SVGraphics.appearanceProgress = 0;
+        this.SVGraphics.recompileGraphics(svgPlot);
+    }
+
+    onUpdateImage() {
         this.SVGraphics.appearanceProgress = 0;
         this.SVGraphics.svgFile = this.images[this._currentImageIndex];
     }

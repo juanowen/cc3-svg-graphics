@@ -10,10 +10,6 @@ export class SwitchButton extends ScreenButton {
     @property({ type: Label })
     public loadingLabel: Label = null;
 
-    start() {
-        super.start();
-    }
-
     onTouchStart() { 
         super.onTouchStart();
 
